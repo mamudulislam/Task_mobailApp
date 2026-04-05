@@ -1,41 +1,37 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  useColorScheme
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import CustomInput from '../components/CustomInput';
-import PrimaryButton from '../components/PrimaryButton';
+import Header from '../components/Header';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Login() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev.bhcjobs.com';
-  
+
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const colors = {
-    bg: isDark ? '#121212' : '#f8f9fc',
-    card: isDark ? '#1e1e1e' : '#fff',
-    textMain: isDark ? '#ffffff' : '#111111',
-    textMuted: isDark ? '#aaaaaa' : '#666666',
-    primary: isDark ? '#3d8eee' : '#0056b3',
-    border: isDark ? '#333333' : '#e1e5eb',
-    inputBg: isDark ? '#1a1a1a' : '#ffffff',
-  };
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!phone || !password) {
-      Alert.alert("Validation Error", "Please enter both phone number and password.");
+      Alert.alert("Validation Error", "Please enter both mobile number and password.");
       return;
     }
 
@@ -49,22 +45,14 @@ export default function Login() {
         method: 'POST',
         body: formData,
       });
-      
+
       const data = await response.json();
-      
+
       if (data.status) {
         Alert.alert("Success", data.message || "Logged in successfully!");
         router.replace('/');
       } else {
         let errorMsg = data.message || "Invalid credentials. Please try again.";
-        if (data.error && typeof data.error === 'object') {
-          const firstErrorKey = Object.keys(data.error)[0];
-          if (firstErrorKey && Array.isArray(data.error[firstErrorKey])) {
-            errorMsg = data.error[firstErrorKey][0];
-          } else if (typeof data.error === 'string') {
-            errorMsg = data.error;
-          }
-        }
         Alert.alert("Login Failed", errorMsg);
       }
     } catch (error) {
@@ -76,58 +64,161 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.formContainer}>
-        <Text style={[styles.headerTitle, { color: colors.textMain }]}>Welcome Back!</Text>
-        <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>Login to your BhcJobs account</Text>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <Header />
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.formContainer, { backgroundColor: colors.card }, isMobile ? styles.formContainerMobile : null]}>
+            <View style={styles.headerTitleContainer}>
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="lock-open" size={24} color={colors.primary} />
+              </View>
+              <Text style={[styles.headerTitle, { color: colors.textMain }]}>Welcome Back</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>Enter your credentials to access your account</Text>
+            </View>
 
-        <CustomInput 
-          label="Phone Number" 
-          colors={colors}
-          placeholder="01724171556"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          editable={!loading}
-        />
+            <CustomInput
+              label="Mobile Number"
+              colors={colors}
+              placeholder="e.g. 01XXXXXXXXX"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+              editable={!loading}
+              icon="call-outline"
+            />
 
-        <CustomInput 
-          label="Password" 
-          colors={colors}
-          placeholder="Enter your password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          editable={!loading}
-        />
+            <CustomInput
+              label="Password"
+              colors={colors}
+              placeholder="Enter your password"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              editable={!loading}
+              icon="lock-closed-outline"
+              rightIcon={
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.primary} />
+                </TouchableOpacity>
+              }
+            />
 
-        <PrimaryButton 
-          title="Login" 
-          loading={loading} 
-          color={colors.primary} 
-          onPress={handleLogin} 
-        />
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>SIGN IN</Text>
+              )}
+            </TouchableOpacity>
 
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textMuted }]}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={[styles.registerLink, { color: colors.primary }]}> Register here</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+            <View style={styles.footerInner}>
+              <Text style={[styles.footerText, { color: colors.textMuted }]}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/register')}>
+                <Text style={[styles.registerLink, { color: colors.primary }]}>Register Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  formContainer: { flex: 1, padding: 24, justifyContent: 'center' },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
-  headerSubtitle: { fontSize: 16, marginBottom: 32 },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
-  footerText: { fontSize: 14 },
-  registerLink: { fontSize: 14, fontWeight: 'bold' }
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  keyboardView: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  formContainer: {
+    width: 450,
+    maxWidth: '90%',
+    padding: 35,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  formContainerMobile: {
+    width: '92%',
+    padding: 24,
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+    marginBottom: 35,
+  },
+  iconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  primaryButton: {
+    width: '100%',
+    height: 55,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  footerInner: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+  },
+  registerLink: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  }
 });

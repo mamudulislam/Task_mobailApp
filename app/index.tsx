@@ -7,39 +7,97 @@ import {
   ActivityIndicator, 
   TouchableOpacity,
   Animated,
-  useColorScheme
+  TextInput,
+  ImageBackground,
+  Dimensions
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 // Reusable Components
 import JobCard from '../components/JobCard';
 import IndustryCard from '../components/IndustryCard';
 import CompanyCard from '../components/CompanyCard';
+import Header from '../components/Header';
+import { useTheme } from '../context/ThemeContext';
+
+const { width } = Dimensions.get('window');
 
 interface Industry { id: number; name: string; image: string; jobs_count?: number; }
-interface Job { id: number; title: string; company_name: string; location: string; type?: string; }
+interface Job { id: number; title: string; company_name: string; location: string; type?: string; company_logo?: string; salary?: string; deadline?: string; }
 interface Company { id: number; name: string; logo: string; }
 
 export default function Index() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, colors } = useTheme();
   const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev.bhcjobs.com';
   
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Animations
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState<'all' | 'title' | 'company' | 'location'>('all');
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setFilteredJobs(jobs);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const params = new URLSearchParams({
+        keyword: query,
+        ...(searchType !== 'all' && { type: searchType }),
+      });
+      
+      const response = await fetch(`${API_URL}/api/job/search?${params}`);
+      const data = await response.json();
+      const searchResults = data.data?.data || data.data || [];
+      setFilteredJobs(searchResults);
+    } catch (error) {
+      const filtered = jobs.filter(job => 
+        (job.title || '').toLowerCase().includes(query.toLowerCase()) ||
+        (job.company_name || '').toLowerCase().includes(query.toLowerCase()) ||
+        (job.location || '').toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredJobs(filtered);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleSearchSubmit = () => {
+    performSearch(searchQuery);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setFilteredJobs(jobs);
+  };
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
     ]).start();
 
     const fetchData = async () => {
@@ -55,7 +113,9 @@ export default function Index() {
         const compData = await compRes.json();
 
         setIndustries(indData.data || []);
-        setJobs(jobData.data?.data || jobData.data || []); 
+        const allJobs = jobData.data?.data || jobData.data || [];
+        setJobs(allJobs);
+        setFilteredJobs(allJobs);
         setCompanies(compData.data?.data || compData.data || []);
       } catch (error) {
         console.error("Error fetching data: ", error);
@@ -65,18 +125,6 @@ export default function Index() {
     };
     fetchData();
   }, [fadeAnim, slideAnim]);
-
-  // Theming Colors
-  const colors = {
-    bg: isDark ? '#121212' : '#f8f9fc',
-    card: isDark ? '#1e1e1e' : '#fff',
-    textMain: isDark ? '#ffffff' : '#111111',
-    textMuted: isDark ? '#aaaaaa' : '#666666',
-    primary: isDark ? '#3d8eee' : '#0056b3',
-    headerBg: isDark ? '#1e1e1e' : '#ffffff',
-    iconBg: isDark ? '#233342' : '#e6f0fa',
-    border: isDark ? '#333333' : '#eeeeee'
-  };
 
   const renderIndustry = useCallback(({ item }: { item: Industry }) => (
     <IndustryCard item={item} colors={colors} />
@@ -92,27 +140,50 @@ export default function Index() {
 
   const RenderHeader = () => (
     <>
-      <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
-        <Text style={[styles.logoText, { color: colors.primary }]}>BhcJobs</Text>
-        <View style={styles.authButtons}>
-          <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/login')}>
-            <Text style={[styles.loginText, { color: colors.primary }]}>Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.registerBtn, { backgroundColor: colors.primary }]} onPress={() => router.push('/register')}>
-            <Text style={styles.registerText}>Register</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
+      <Header />
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
         <View style={[styles.heroBanner, { backgroundColor: colors.primary }]}>
-          <Text style={styles.heroTitle}>Find Your Dream Job</Text>
-          <Text style={styles.heroSubtitle}>Explore opportunities from top companies</Text>
+          <Text style={styles.heroTitle}>Find Your Dream Job Today</Text>
+          <Text style={styles.heroSubtitle}>Browse thousands of jobs from leading companies and take the next step in your career.</Text>
+          
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Job title, keywords, or company"
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={handleSearch}
+              onSubmitEditing={handleSearchSubmit}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              style={[styles.searchButton, { backgroundColor: colors.primary }]} 
+              onPress={handleSearchSubmit}
+              disabled={searchLoading}
+            >
+              {searchLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.searchButtonText}>Search</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Popular Industries</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Popular Industries</Text>
+          <TouchableOpacity>
+            <Text style={[styles.seeAll, { color: colors.primary }]}>See All</Text>
+          </TouchableOpacity>
+        </View>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -125,7 +196,12 @@ export default function Index() {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Top Companies</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Top Companies</Text>
+          <TouchableOpacity>
+            <Text style={[styles.seeAll, { color: colors.primary }]}>See All</Text>
+          </TouchableOpacity>
+        </View>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -137,7 +213,12 @@ export default function Index() {
         />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.textMain, marginTop: 25 }]}>Recommended Jobs</Text>
+      <View style={[styles.sectionHeader, { marginTop: 30, marginBottom: 5 }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textMain }]}>Recommended Jobs</Text>
+        <TouchableOpacity>
+          <Text style={[styles.seeAll, { color: colors.primary }]}>See All</Text>
+        </TouchableOpacity>
+      </View>
     </>
   );
 
@@ -152,14 +233,17 @@ export default function Index() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <FlatList 
-        data={jobs}
+        data={filteredJobs}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderJob}
         ListHeaderComponent={RenderHeader}
         ListEmptyComponent={
-          <Text style={{ paddingHorizontal: 20, color: colors.textMuted, fontStyle: 'italic' }}>
-            No jobs available right now.
-          </Text>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="briefcase-outline" size={60} color={colors.textMuted} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              No jobs available right now.
+            </Text>
+          </View>
         }
         contentContainerStyle={{ paddingBottom: 30 }}
         initialNumToRender={8}
@@ -172,34 +256,60 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 15,
-    elevation: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-  },
-  logoText: { fontSize: 22, fontWeight: 'bold' },
-  authButtons: { flexDirection: 'row', gap: 10 },
-  loginBtn: { paddingVertical: 8, paddingHorizontal: 15 },
-  loginText: { fontWeight: '600' },
-  registerBtn: { paddingVertical: 8, paddingHorizontal: 15, borderRadius: 8 },
-  registerText: { color: '#fff', fontWeight: 'bold' },
-
   heroBanner: {
     padding: 30,
     marginHorizontal: 15,
     marginTop: 20,
-    borderRadius: 15,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  heroTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginBottom: 5 },
-  heroSubtitle: { color: '#e0f0ff', fontSize: 14 },
+  heroTitle: { color: '#fff', fontSize: 28, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  heroSubtitle: { color: '#e0f0ff', fontSize: 14, marginBottom: 25, textAlign: 'center', lineHeight: 20 },
+  
+  searchContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 30,
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    height: 55,
+  },
+  searchIcon: { marginRight: 10 },
+  clearButton: { padding: 5, marginRight: 5 },
+  searchInput: { flex: 1, height: '100%', fontSize: 14, color: '#333' },
+  searchButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+  },
+  searchButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
 
-  section: { marginTop: 25 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, paddingHorizontal: 20 },
+  section: { marginTop: 30 },
+  sectionHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    marginBottom: 15 
+  },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold' },
+  seeAll: { fontSize: 14, fontWeight: '600' },
   listPadding: { paddingHorizontal: 15, gap: 12 },
+  
+  emptyContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginTop: 50, 
+    paddingHorizontal: 40 
+  },
+  emptyText: { 
+    marginTop: 15, 
+    fontSize: 16, 
+    textAlign: 'center', 
+    fontStyle: 'italic' 
+  },
 });

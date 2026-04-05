@@ -8,16 +8,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  useColorScheme
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import CustomInput from '../components/CustomInput';
-import PrimaryButton from '../components/PrimaryButton';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Register() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors } = useTheme();
   const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://dev.bhcjobs.com';
   
   const [step, setStep] = useState<1 | 2>(1);
@@ -36,22 +36,9 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [receivedOtp, setReceivedOtp] = useState<string | null>(null);
 
-  const colors = {
-    bg: isDark ? '#121212' : '#f8f9fc',
-    card: isDark ? '#1e1e1e' : '#fff',
-    textMain: isDark ? '#ffffff' : '#111111',
-    textMuted: isDark ? '#aaaaaa' : '#666666',
-    primary: isDark ? '#3d8eee' : '#0056b3',
-    border: isDark ? '#333333' : '#e1e5eb',
-    inputBg: isDark ? '#1a1a1a' : '#ffffff',
-    noteBg: isDark ? '#1e3323' : '#e6f4ea',
-    noteBorder: isDark ? '#2e4c36' : '#cce8d6',
-    noteText: isDark ? '#66de93' : '#137333',
-  };
-
   const handleRegister = async () => {
     if (!name || !phone || !email || !password || !confirmPassword) {
-      Alert.alert("Validation Error", "Please fill in the required fields.");
+      Alert.alert("Validation Error", "Please fill in all required fields.");
       return;
     }
     if (password !== confirmPassword) {
@@ -78,7 +65,7 @@ export default function Register() {
       const data = await response.json();
       
       if (data.status) {
-        Alert.alert("Registration Successful", data.message || "Please check the OTP.");
+        Alert.alert("Success", data.message || "OTP sent to your phone.");
         const exactOtp = data.data?.otp;
         if (exactOtp) setReceivedOtp(exactOtp.toString());
         setStep(2);
@@ -86,11 +73,7 @@ export default function Register() {
         let errorMsg = data.message || "Failed to register.";
         if (data.error && typeof data.error === 'object') {
           const firstErrorKey = Object.keys(data.error)[0];
-          if (firstErrorKey && Array.isArray(data.error[firstErrorKey])) {
-            errorMsg = data.error[firstErrorKey][0];
-          } else if (typeof data.error === 'string') {
-            errorMsg = data.error;
-          }
+          errorMsg = data.error[firstErrorKey][0] || errorMsg;
         }
         Alert.alert("Registration Failed", errorMsg);
       }
@@ -119,7 +102,7 @@ export default function Register() {
       const data = await response.json();
       
       if (data.status) {
-        Alert.alert("Verification Successful", data.message || "Signed in successfully.");
+        Alert.alert("Verified", data.message || "Registration complete!");
         router.replace('/login');
       } else {
         Alert.alert("Verification Failed", data.message || "Invalid OTP.");
@@ -132,72 +115,142 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.formContainer}>
-          <Text style={[styles.headerTitle, { color: colors.textMain }]}>{step === 1 ? 'Create Account' : 'Verify Phone'}</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
-            {step === 1 ? 'Join BhcJobs to find your next opportunity' : `We've sent an OTP to \n${phone}`}
-          </Text>
-
-          {step === 1 ? (
-            <>
-              <CustomInput label="Name" colors={colors} placeholder="test" value={name} onChangeText={setName} editable={!loading} />
-              <CustomInput label="Phone Number" colors={colors} placeholder="01724171556" keyboardType="phone-pad" value={phone} onChangeText={setPhone} editable={!loading} />
-              <CustomInput label="Email" colors={colors} placeholder="test@gmil.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} editable={!loading} />
-              <CustomInput label="Password" colors={colors} placeholder="111111" secureTextEntry value={password} onChangeText={setPassword} editable={!loading} />
-              <CustomInput label="Confirm Password" colors={colors} placeholder="111111" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} editable={!loading} />
-              <CustomInput label="Passport Number (Optional)" colors={colors} placeholder="A12345674" value={passportNumber} onChangeText={setPassportNumber} editable={!loading} />
-              <CustomInput label="Date of Birth" colors={colors} placeholder="2002-12-12" value={dob} onChangeText={setDob} editable={!loading} />
-              <CustomInput label="Gender" colors={colors} placeholder="male or female" autoCapitalize="none" value={gender} onChangeText={setGender} editable={!loading} />
-
-              <PrimaryButton title="Register" loading={loading} color={colors.primary} onPress={handleRegister} />
-              
-              <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: colors.textMuted }]}>Already have an account?</Text>
-                <TouchableOpacity onPress={() => router.push('/login')}>
-                  <Text style={[styles.linkText, { color: colors.primary }]}> Login here</Text>
-                </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <Header />
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+          <View style={[styles.formContainer, { backgroundColor: colors.card }]}>
+            <View style={styles.headerTitleContainer}>
+              <View style={[styles.iconCircle, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name={step === 1 ? "person-add" : "shield-checkmark"} size={24} color={colors.primary} />
               </View>
-            </>
-          ) : (
-            <>
-              {receivedOtp && (
-                <View style={[styles.devNote, { backgroundColor: colors.noteBg, borderColor: colors.noteBorder }]}>
-                  <Text style={[styles.devNoteText, { color: colors.noteText }]}>Task Hint: Received OTP is {receivedOtp}</Text>
+              <Text style={[styles.headerTitle, { color: colors.textMain }]}>
+                {step === 1 ? 'Create Account' : 'Verify Phone'}
+              </Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
+                {step === 1 ? 'Fill in your details to get started' : `Enter the OTP sent to ${phone}`}
+              </Text>
+            </View>
+
+            {step === 1 ? (
+              <>
+                <CustomInput label="Full Name" colors={colors} placeholder="Your full name" value={name} onChangeText={setName} icon="person-outline" />
+                <CustomInput label="Phone Number" colors={colors} placeholder="01XXXXXXXXX" keyboardType="phone-pad" value={phone} onChangeText={setPhone} icon="call-outline" />
+                <CustomInput label="Email Address" colors={colors} placeholder="yourname@example.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} icon="mail-outline" />
+                <View style={styles.row}>
+                   <View style={{ flex: 1, marginRight: 10 }}>
+                     <CustomInput label="Password" colors={colors} placeholder="******" secureTextEntry value={password} onChangeText={setPassword} icon="lock-closed-outline" />
+                   </View>
+                   <View style={{ flex: 1 }}>
+                     <CustomInput label="Confirm" colors={colors} placeholder="******" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword} icon="lock-closed-outline" />
+                   </View>
                 </View>
-              )}
-              
-              <CustomInput label="OTP Code" colors={colors} placeholder="Enter OTP" keyboardType="number-pad" maxLength={6} value={otp} onChangeText={setOtp} editable={!loading} style={{ textAlign: "center", fontSize: 24, borderWidth: 1, padding: 14, borderRadius: 8, color: colors.textMain, backgroundColor: colors.inputBg, borderColor: colors.border }} />
+                <CustomInput label="Passport (Optional)" colors={colors} placeholder="AXXXXXXXX" value={passportNumber} onChangeText={setPassportNumber} icon="document-text-outline" />
+                <View style={styles.row}>
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <CustomInput label="Date of Birth" colors={colors} placeholder="YYYY-MM-DD" value={dob} onChangeText={setDob} icon="calendar-outline" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <CustomInput label="Gender" colors={colors} placeholder="male/female" value={gender} onChangeText={setGender} icon="transgender-outline" />
+                  </View>
+                </View>
 
-              <PrimaryButton title="Verify & Complete" loading={loading} color={colors.primary} onPress={handleVerify} />
-              
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => setStep(1)} disabled={loading}>
-                <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Go Back</Text>
-              </TouchableOpacity>
-            </>
-          )}
+                <TouchableOpacity 
+                  style={[styles.primaryButton, { backgroundColor: colors.primary }]} 
+                  onPress={handleRegister}
+                  disabled={loading}
+                >
+                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>REGISTER</Text>}
+                </TouchableOpacity>
+                
+                <View style={styles.footer}>
+                  <Text style={[styles.footerText, { color: colors.textMuted }]}>Already have an account? </Text>
+                  <TouchableOpacity onPress={() => router.push('/login')}>
+                    <Text style={[styles.linkText, { color: colors.primary }]}>Login</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                {receivedOtp && (
+                  <View style={[styles.devNote, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
+                    <Text style={[styles.devNoteText, { color: colors.primary }]}>Task Hint: OTP is {receivedOtp}</Text>
+                  </View>
+                )}
+                
+                <CustomInput 
+                  label="OTP Code" 
+                  colors={colors} 
+                  placeholder="Enter 6-digit code" 
+                  keyboardType="number-pad" 
+                  maxLength={6} 
+                  value={otp} 
+                  onChangeText={setOtp} 
+                  style={styles.otpInput}
+                />
 
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                <TouchableOpacity 
+                  style={[styles.primaryButton, { backgroundColor: colors.primary }]} 
+                  onPress={handleVerify}
+                  disabled={loading}
+                >
+                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>VERIFY & JOIN</Text>}
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.backButton} onPress={() => setStep(1)} disabled={loading}>
+                  <Text style={[styles.backButtonText, { color: colors.primary }]}>Back to Edit Info</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContainer: { flexGrow: 1, paddingVertical: 20 },
-  formContainer: { padding: 24 },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
-  headerSubtitle: { fontSize: 16, marginBottom: 32, lineHeight: 24 },
-  secondaryButton: { marginTop: 15, padding: 16, alignItems: 'center' },
-  secondaryButtonText: { fontSize: 16, fontWeight: '600' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
+  scrollContainer: { flexGrow: 1, paddingVertical: 40, alignItems: 'center' },
+  formContainer: { 
+    width: 500, 
+    maxWidth: '92%', 
+    padding: 30, 
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  headerTitleContainer: { alignItems: 'center', marginBottom: 30 },
+  iconCircle: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 8 },
+  headerSubtitle: { fontSize: 14, textAlign: 'center' },
+  row: { flexDirection: 'row' },
+  primaryButton: { 
+    width: '100%', 
+    height: 55, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+  backButton: { marginTop: 20, padding: 10, alignItems: 'center' },
+  backButtonText: { fontSize: 14, fontWeight: '600' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
   footerText: { fontSize: 14 },
   linkText: { fontSize: 14, fontWeight: 'bold' },
-  devNote: { padding: 12, borderRadius: 8, marginBottom: 20, borderWidth: 1 },
-  devNoteText: { fontSize: 14, fontWeight: '500', textAlign: 'center' }
+  devNote: { padding: 15, borderRadius: 10, marginBottom: 25, borderWidth: 1, alignItems: 'center' },
+  devNoteText: { fontSize: 14, fontWeight: '600' },
+  otpInput: { textAlign: "center", fontSize: 24, letterSpacing: 5 }
 });
