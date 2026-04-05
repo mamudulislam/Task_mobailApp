@@ -62,7 +62,7 @@ BHC Jobs is designed to provide a seamless experience for job seekers. It featur
 
 You can find the latest Android build (APK) here:
 
-👉 **[Download APK (Expo Build)](https://expo.dev/accounts/mamudul/projects/my-app/builds/1491c0ac-d92e-4e67-a8da-11ba2780aa88)**
+👉 **[Download APK (Expo Build)](https://expo.dev/accounts/mamudul/projects/my-app/builds/00c79905-e797-4e6f-9c86-0ce018b007b7)**
 
 > **Note:** This link grants access to the build artifacts generated via EAS (Expo Application Services) and will remain valid for 13 days from the date of generation.
 
