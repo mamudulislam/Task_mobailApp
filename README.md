@@ -1,50 +1,64 @@
-# Welcome to your Expo app 👋
+# BhcJobs React Native Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is a React Native application built with [Expo](https://expo.dev) that serves as a candidate task for developing the "BhcJobs" platform interface.
 
-## Get started
+## 🚀 Features
 
-1. Install dependencies
+- **Landing Page:** Displays a hero banner, popular industries, top companies, and recommended jobs fetched from live APIs.
+- **Login Screen:** User authentication interface with form validation and API integration.
+- **Registration Screen:** Multi-step user registration with OTP verification.
+- **Modern UI/UX:** Clean, responsive design following the requested blue-theme standard.
+- **State Management:** Functional React components with hooks.
 
-   ```bash
+## 🛠️ Tech Stack
+
+- **Framework:** [React Native](https://reactnative.dev)
+- **Toolchain:** [Expo](https://expo.dev)
+- **Routing:** [Expo Router](https://docs.expo.dev/router/introduction/)
+- **API Integration:** Fetch API
+
+## 📦 Setup Instructions
+
+1. **Clone the repository:**
+   \`\`\`bash
+   git clone <your-github-repo-url>
+   cd my-app
+   \`\`\`
+
+2. **Install dependencies:**
+   \`\`\`bash
    npm install
-   ```
+   \`\`\`
 
-2. Start the app
+3. **Start the development server:**
+   \`\`\`bash
+   npm start
+   \`\`\`
 
-   ```bash
-   npx expo start
-   ```
+4. **Run the app:**
+   - Press \`a\` to run on Android Emulator.
+   - Press \`i\` to run on iOS Simulator (macOS only).
+   - Scan the QR code with the Expo Go app on your physical device.
 
-In the output, you'll find options to open the app in a
+## ⚙️ Building the APK
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+To generate an APK file for Android:
+1. Ensure you have the EAS CLI installed (\`npm install -g eas-cli\`).
+2. Log in to your Expo account (\`eas login\`).
+3. Run the build command:
+   \`\`\`bash
+   eas build -p android --profile preview
+   \`\`\`
+   *(You may need to configure \`eas.json\` if not already set up)*
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📄 API Reference Used
+- Base URL: \`https://dev.bhcjobs.com\`
+- GET \`/api/industry/get\`
+- GET \`/api/job/get\`
+- GET \`/api/company/get\`
+- POST \`/api/job_seeker/register\`
+- POST \`/api/job_seeker/phone_verify\`
+- POST \`/api/job_seeker/login\`
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+*Developed for evaluation purposes.*
